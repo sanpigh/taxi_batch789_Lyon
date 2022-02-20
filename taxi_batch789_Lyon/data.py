@@ -1,7 +1,7 @@
 import pandas as pd
 
 AWS_BUCKET_PATH = "s3://wagon-public-datasets/taxi-fare-train.csv"
-DISK_PATH = './raw_data/train_10k.csv'
+DISK_PATH = '/home/san/code/sanpigh/taxi_batch789_Lyon/raw_data/train_10k.csv'
 
 PATH = DISK_PATH
 
