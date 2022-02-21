@@ -1,6 +1,8 @@
+from audioop import cross
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
 from sklearn.preprocessing import OneHotEncoder
+from sklearn.model_selection import train_test_split, cross_validate
 from sklearn.compose import ColumnTransformer
 from sklearn.linear_model import LinearRegression
 from taxi_batch789_Lyon.encoders import DistanceTransformer, TimeFeaturesEncoder
@@ -17,14 +19,24 @@ MLFLOW_URI = 'https://mlflow.lewagon.co/'
 
 
 class Trainer():
-    def __init__(self, X, y):
+    def __init__(self, X, y, **kwargs):
         """
             X: pandas DataFrame
             y: pandas Series
         """
+        # assert X is dataframe
+        # assert y is series
         self.pipeline = None
         self.X = X
         self.y = y
+
+        self.kwargs = kwargs
+        self.cross_val = self.kwargs.get("cross_val", 0)
+#        self.score = self.kwargs.get('scores', 'neg_root_mean_squared_error')
+
+        self.X_train, self.X_test, self.y_train, self.y_test = train_test_split(X,y,
+                                                        test_size=0.3)
+        del X, y
 
         self.experiment_name = EXPERIMENT_NAME
         self.mlflow_experiment_id
@@ -55,21 +67,31 @@ class Trainer():
     def run(self):
         """set and train the pipeline"""
         self.set_pipeline()
-        self.pipeline.fit(self.X,self.y)
+        self.pipeline.fit(self.X_train,self.y_train)
 
 
-    def evaluate(self, X_test, y_test):
-        """evaluates the pipeline on df_test and return the RMSE"""
-        y_pred = self.pipeline.predict(X_test)
-        rmse_error = compute_rmse(y_pred, y_test)
-        model_name = self.pipeline.steps[-1][0]
+    def evaluate(self):
+
+        if self.cross_val == 0:
+            """evaluates the pipeline on X_test and return the RMSE"""
+            y_train_pred = self.pipeline.predict(self.X_train)
+            y_test_pred  = self.pipeline.predict(self.X_test)
+            rmse_train_error = compute_rmse(self.y_train,y_train_pred)
+            rmse_test_error  = compute_rmse(self.y_test,y_test_pred)
+        else:
+            results = cross_validate(self.X_train, self.y_train, cv=self.cross_val,scoring=self.score)
+
+
+        model_name = self.pipeline.steps[-1][0] # get the name from the pipe
         yourname   = 'sanpigh'
-
         run = self.mlflow_run
-        self.mlflow_client.log_metric(run.info.run_id, "rmse", rmse_error)
+        self.mlflow_client.log_metric(run.info.run_id, "rmse_train_error",
+                                      rmse_train_error)
+        self.mlflow_client.log_metric(run.info.run_id, "rmse_test_error",
+                                      rmse_test_error)
         self.mlflow_client.log_param(run.info.run_id, "model", model_name)
         self.mlflow_client.log_param(run.info.run_id, "student_name", yourname)
-        return rmse_error
+        return rmse_test_error
 
 # MLFLOW
 
