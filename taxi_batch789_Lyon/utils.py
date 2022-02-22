@@ -1,4 +1,6 @@
 import numpy as np
+from termcolor import colored
+import joblib
 
 
 def haversine_vectorized(df,
@@ -28,3 +30,8 @@ def haversine_vectorized(df,
 
 def compute_rmse(y_pred, y_true):
     return np.sqrt(((y_pred - y_true) ** 2).mean())
+
+def save_model(pipeline):
+    """Save the model into a .joblib format"""
+    joblib.dump(pipeline, 'model.joblib')
+    print(colored("model.joblib saved locally", "green"))
